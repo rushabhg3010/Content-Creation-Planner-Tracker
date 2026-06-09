@@ -1,3 +1,25 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCu4vs5QdKO3ID1h6EuyVHf3_3mDUVK7rI",
+  authDomain: "content-creator-calendar.firebaseapp.com",
+  projectId: "content-creator-calendar",
+  storageBucket: "content-creator-calendar.firebasestorage.app",
+  messagingSenderId: "903975634186",
+  appId: "1:903975634186:web:fbe4587f33193122f9e6f3",
+  measurementId: "G-YP8PS75G8H"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
 const calendarDays = document.getElementById("calendar-days");
 const monthYearDisplay = document.getElementById("month-year-display");
 const prevMonthBtn = document.getElementById("prev-month");
