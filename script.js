@@ -1,11 +1,8 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// 1. Import the necessary Firebase SDK functions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// 2. PASTE YOUR FIREBASE CONFIGURATION HERE
 const firebaseConfig = {
   apiKey: "AIzaSyCu4vs5QdKO3ID1h6EuyVHf3_3mDUVK7rI",
   authDomain: "content-creator-calendar.firebaseapp.com",
@@ -16,57 +13,69 @@ const firebaseConfig = {
   measurementId: "G-YP8PS75G8H"
 };
 
-// Initialize Firebase
+// 3. Initialize Firebase and Firestore Database
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const db = getFirestore(app);
 
+// --- Dom Elements (Same as before) ---
 const calendarDays = document.getElementById("calendar-days");
 const monthYearDisplay = document.getElementById("month-year-display");
 const prevMonthBtn = document.getElementById("prev-month");
 const nextMonthBtn = document.getElementById("next-month");
-
 const taskModal = document.getElementById("task-modal");
 const closeModal = document.getElementById("close-modal");
 const saveTasksBtn = document.getElementById("save-tasks-btn");
 const modalDateTitle = document.getElementById("modal-date-title");
 
-// Checkboxes
 const taskReel = document.getElementById("task-reel");
 const taskVideo = document.getElementById("task-video");
 const taskPodcast = document.getElementById("task-podcast");
 
 let currentDate = new Date();
-let selectedDateKey = ""; // Used to track data format: YYYY-MM-DD
+let selectedDateKey = ""; 
+let contentData = {}; // We will fetch this from Firebase instead of localStorage
 
-// Load tracking structure from localStorage or start empty
-let contentData = JSON.parse(localStorage.getItem("creatorPlannerData")) || {};
+const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-const months = [
-    "January", "February", "March", "April", "May", "June", 
-    "July", "August", "September", "October", "November", "December"
-];
+// 4. NEW: Fetch data from Firebase Cloud for the current Month & Year
+async function fetchMonthData() {
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const docId = `${year}-${month}`; // We store tasks grouped by Year-Month
 
+    const docRef = doc(db, "planner", docId);
+    try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            contentData = docSnap.data();
+        } else {
+            contentData = {}; // Clear if no tasks exist for this month
+        }
+    } catch (error) {
+        console.error("Error loading calendar data from Cloud: ", error);
+    }
+    
+    // Once data arrives from the cloud, build the visual grid
+    renderCalendar();
+}
+
+// 5. Render Calendar (Updated to read from contentData object loaded from cloud)
 function renderCalendar() {
     calendarDays.innerHTML = "";
-    
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
     monthYearDisplay.innerText = `${months[month]} ${year}`;
     
-    // First day of the current month index (0 = Sun, 1 = Mon...)
     const firstDayIndex = new Date(year, month, 1).getDay();
-    // Total days in current month
     const totalDays = new Date(year, month + 1, 0).getDate();
 
-    // Render Blank Cells for preceding month padding
     for (let i = 0; i < firstDayIndex; i++) {
         const emptyDiv = document.createElement("div");
         emptyDiv.classList.add("day", "empty");
         calendarDays.appendChild(emptyDiv);
     }
 
-    // Render Actual Days
     for (let day = 1; day <= totalDays; day++) {
         const dayDiv = document.createElement("div");
         dayDiv.classList.add("day");
@@ -78,7 +87,6 @@ function renderCalendar() {
             <div class="day-symbols" id="symbols-${dateKey}"></div>
         `;
 
-        // Append active saved symbols right away if they exist
         const symbolsContainer = dayDiv.querySelector(".day-symbols");
         if (contentData[dateKey]) {
             if (contentData[dateKey].reel) symbolsContainer.innerHTML += `<i class="fab fa-instagram reel-icon"></i>`;
@@ -86,14 +94,11 @@ function renderCalendar() {
             if (contentData[dateKey].podcast) symbolsContainer.innerHTML += `<i class="fas fa-microphone podcast-icon"></i>`;
         }
 
-        // Add Click listener to open editor
         dayDiv.addEventListener("click", () => openPlanner(dateKey, day, months[month]));
-        
         calendarDays.appendChild(dayDiv);
     }
 }
 
-// Open modal and load stored values for clicked date
 function openPlanner(dateKey, day, monthName) {
     selectedDateKey = dateKey;
     modalDateTitle.innerText = `Content for ${monthName} ${day}`;
@@ -107,12 +112,11 @@ function openPlanner(dateKey, day, monthName) {
         taskVideo.checked = false;
         taskPodcast.checked = false;
     }
-    
     taskModal.style.display = "flex";
 }
 
-// Save selections to structural data Object & LocalStorage
-saveTasksBtn.addEventListener("click", () => {
+// 6. NEW: Save selections straight into Firestore Database
+saveTasksBtn.addEventListener("click", async () => {
     if (!contentData[selectedDateKey]) {
         contentData[selectedDateKey] = {};
     }
@@ -121,32 +125,41 @@ saveTasksBtn.addEventListener("click", () => {
     contentData[selectedDateKey].video = taskVideo.checked;
     contentData[selectedDateKey].podcast = taskPodcast.checked;
 
-    // Clean memory if all items unchecked
+    // Clean up local object keys if day is completely wiped
     if (!taskReel.checked && !taskVideo.checked && !taskPodcast.checked) {
         delete contentData[selectedDateKey];
     }
 
-    localStorage.setItem("creatorPlannerData", JSON.stringify(contentData));
-    taskModal.style.display = "none";
-    renderCalendar(); // Refresh UI dynamically
+    // Save the entire current month tracking map into Firestore cloud document
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const docId = `${year}-${month}`;
+
+    try {
+        await setDoc(doc(db, "planner", docId), contentData);
+        taskModal.style.display = "none";
+        renderCalendar();
+    } catch (e) {
+        console.error("Error saving your content updates to Cloud: ", e);
+        alert("Failed to sync. Please check your internet connection.");
+    }
 });
 
-// Navigation Handlers
+// Navigation handlers fetch fresh documents when changing months
 prevMonthBtn.addEventListener("click", () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
-    renderCalendar();
+    fetchMonthData();
 });
 
 nextMonthBtn.addEventListener("click", () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
-    renderCalendar();
+    fetchMonthData();
 });
 
-// Close Modal Controls
 closeModal.addEventListener("click", () => taskModal.style.display = "none");
 window.addEventListener("click", (e) => {
     if (e.target === taskModal) taskModal.style.display = "none";
 });
 
-// Initial Fire
-renderCalendar();
+// Initial boot logic changes from local array mapping to fetching live database records
+fetchMonthData();
