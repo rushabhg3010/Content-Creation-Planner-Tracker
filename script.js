@@ -31,6 +31,10 @@ const taskReel = document.getElementById("task-reel");
 const taskVideo = document.getElementById("task-video");
 const taskPodcast = document.getElementById("task-podcast");
 
+const countReel = document.getElementById("count-reel");
+const countVideo = document.getElementById("count-video");
+const countPodcast = document.getElementById("count-podcast");
+
 let currentDate = new Date();
 let selectedDateKey = ""; 
 let contentData = {}; // We will fetch this from Firebase instead of localStorage
@@ -59,13 +63,18 @@ async function fetchMonthData() {
     renderCalendar();
 }
 
-// 5. Render Calendar (Updated to read from contentData object loaded from cloud)
+// 5. Render Calendar (Updated to include calculated metrics)
 function renderCalendar() {
     calendarDays.innerHTML = "";
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
     monthYearDisplay.innerText = `${months[month]} ${year}`;
+    
+    // Initialize counters for the current month
+    let totalReels = 0;
+    let totalVideos = 0;
+    let totalPodcasts = 0;
     
     const firstDayIndex = new Date(year, month, 1).getDay();
     const totalDays = new Date(year, month + 1, 0).getDate();
@@ -89,14 +98,28 @@ function renderCalendar() {
 
         const symbolsContainer = dayDiv.querySelector(".day-symbols");
         if (contentData[dateKey]) {
-            if (contentData[dateKey].reel) symbolsContainer.innerHTML += `<i class="fab fa-instagram reel-icon"></i>`;
-            if (contentData[dateKey].video) symbolsContainer.innerHTML += `<i class="fab fa-youtube video-icon"></i>`;
-            if (contentData[dateKey].podcast) symbolsContainer.innerHTML += `<i class="fas fa-microphone podcast-icon"></i>`;
+            if (contentData[dateKey].reel) {
+                symbolsContainer.innerHTML += `<i class="fab fa-instagram reel-icon"></i>`;
+                totalReels++; // Increment counter
+            }
+            if (contentData[dateKey].video) {
+                symbolsContainer.innerHTML += `<i class="fab fa-youtube video-icon"></i>`;
+                totalVideos++; // Increment counter
+            }
+            if (contentData[dateKey].podcast) {
+                symbolsContainer.innerHTML += `<i class="fas fa-microphone podcast-icon"></i>`;
+                totalPodcasts++; // Increment counter
+            }
         }
 
         dayDiv.addEventListener("click", () => openPlanner(dateKey, day, months[month]));
         calendarDays.appendChild(dayDiv);
     }
+
+    // Update the counter elements in the DOM header
+    countReel.innerText = totalReels;
+    countVideo.innerText = totalVideos;
+    countPodcast.innerText = totalPodcasts;
 }
 
 function openPlanner(dateKey, day, monthName) {
@@ -114,6 +137,9 @@ function openPlanner(dateKey, day, monthName) {
     }
     taskModal.style.display = "flex";
 }
+
+
+
 
 // 6. NEW: Save selections straight into Firestore Database
 saveTasksBtn.addEventListener("click", async () => {
@@ -163,3 +189,4 @@ window.addEventListener("click", (e) => {
 
 // Initial boot logic changes from local array mapping to fetching live database records
 fetchMonthData();
+
