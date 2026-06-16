@@ -34,6 +34,7 @@ const taskPodcast = document.getElementById("task-podcast");
 const countReel = document.getElementById("count-reel");
 const countVideo = document.getElementById("count-video");
 const countPodcast = document.getElementById("count-podcast");
+const countTotal = document.getElementById("count-total");
 
 let currentDate = new Date();
 let selectedDateKey = ""; 
@@ -75,6 +76,7 @@ function renderCalendar() {
     let totalReels = 0;
     let totalVideos = 0;
     let totalPodcasts = 0;
+    let totalCount =0;
     
     const firstDayIndex = new Date(year, month, 1).getDay();
     const totalDays = new Date(year, month + 1, 0).getDate();
@@ -120,6 +122,8 @@ function renderCalendar() {
     countReel.innerText = totalReels;
     countVideo.innerText = totalVideos;
     countPodcast.innerText = totalPodcasts;
+    totalCount = (totalReels)+(totalVideos)+(totalPodcasts)
+    countTotal.innerText = totalCount;
 }
 
 function openPlanner(dateKey, day, monthName) {
