@@ -1,9 +1,9 @@
 // 1. Import the necessary Firebase SDK functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// 2. PASTE YOUR FIREBASE CONFIGURATION HERE
-const firebaseConfig = {
+const firebaseConfig =  {
   apiKey: "AIzaSyCu4vs5QdKO3ID1h6EuyVHf3_3mDUVK7rI",
   authDomain: "content-creator-calendar.firebaseapp.com",
   projectId: "content-creator-calendar",
@@ -16,6 +16,22 @@ const firebaseConfig = {
 // 3. Initialize Firebase and Firestore Database
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// Auth UI logic
+const loginBtn = document.getElementById("login-btn");
+loginBtn.addEventListener("click", () => signInWithPopup(auth, provider));
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        loginBtn.style.display = "none";
+        fetchMonthData(); // Load data only after login
+    } else {
+        loginBtn.style.display = "block";
+        // Clear calendar or show login prompt
+    }
+});
 
 // --- Dom Elements (Same as before) ---
 const calendarDays = document.getElementById("calendar-days");
@@ -44,23 +60,21 @@ const months = ["January", "February", "March", "April", "May", "June", "July", 
 
 // 4. NEW: Fetch data from Firebase Cloud for the current Month & Year
 async function fetchMonthData() {
+    const user = auth.currentUser;
+    if (!user) return; // Wait for authentication
+
     const year = currentDate.getFullYear();
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const docId = `${year}-${month}`; // We store tasks grouped by Year-Month
+    const docId = `${year}-${month}`;
 
-    const docRef = doc(db, "planner", docId);
+    // Path now includes the user's UID to isolate their data
+    const docRef = doc(db, "users", user.uid, "planner", docId); 
     try {
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            contentData = docSnap.data();
-        } else {
-            contentData = {}; // Clear if no tasks exist for this month
-        }
+        contentData = docSnap.exists() ? docSnap.data() : {};
     } catch (error) {
         console.error("Error loading calendar data from Cloud: ", error);
     }
-    
-    // Once data arrives from the cloud, build the visual grid
     renderCalendar();
 }
 
@@ -147,26 +161,26 @@ function openPlanner(dateKey, day, monthName) {
 
 // 6. NEW: Save selections straight into Firestore Database
 saveTasksBtn.addEventListener("click", async () => {
-    if (!contentData[selectedDateKey]) {
-        contentData[selectedDateKey] = {};
-    }
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (!contentData[selectedDateKey]) contentData[selectedDateKey] = {};
     
     contentData[selectedDateKey].reel = taskReel.checked;
     contentData[selectedDateKey].video = taskVideo.checked;
     contentData[selectedDateKey].podcast = taskPodcast.checked;
 
-    // Clean up local object keys if day is completely wiped
     if (!taskReel.checked && !taskVideo.checked && !taskPodcast.checked) {
         delete contentData[selectedDateKey];
     }
 
-    // Save the entire current month tracking map into Firestore cloud document
     const year = currentDate.getFullYear();
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
     const docId = `${year}-${month}`;
 
     try {
-        await setDoc(doc(db, "planner", docId), contentData);
+        // Save to the user-specific path
+        await setDoc(doc(db, "users", user.uid, "planner", docId), contentData);
         taskModal.style.display = "none";
         renderCalendar();
     } catch (e) {
@@ -193,4 +207,3 @@ window.addEventListener("click", (e) => {
 
 // Initial boot logic changes from local array mapping to fetching live database records
 fetchMonthData();
-

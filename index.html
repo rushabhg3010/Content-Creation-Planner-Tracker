@@ -10,11 +10,17 @@
 <body>
 
     <div class="calendar-container">
-    <div class="calendar-header">
-        <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
-        <h2 id="month-year-display"></h2>
-        <button id="next-month"><i class="fas fa-chevron-right"></i></button>
-    </div>
+        <!-- New Auth Section -->
+        <div id="auth-section" style="text-align: right; margin-bottom: 10px;">
+            <button id="login-btn">Sign in with Google</button>
+            <span id="user-display" style="display: none;"></span>
+        </div>
+
+        <div class="calendar-header">
+            <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
+            <h2 id="month-year-display"></h2>
+            <button id="next-month"><i class="fas fa-chevron-right"></i></button>
+        </div>
 
     <div class="monthly-stats">
         <div class="stat-item"><i class="fab fa-instagram reel-icon"></i> Reels/Shorts: <span id="count-reel">0</span></div>

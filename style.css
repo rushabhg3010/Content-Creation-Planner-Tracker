@@ -164,6 +164,17 @@ body {
     cursor: pointer;
 }
 
+#login-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent-color);
+    border: none;
+    color: white;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;  
+}
+
 /* Monthly Statistics Bar */
 .monthly-stats {
     display: flex;
